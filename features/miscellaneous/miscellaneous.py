@@ -1159,7 +1159,7 @@ class Miscellaneous(Cog):
     
     async def _send_oscar_photo(self, ctx):
         """Helper method to send Oscar photo"""
-        async with self.bot.session.get("https://oscar.leah.rocks/", allow_redirects=False) as response:
+        async with self.bot.session.get("https://oscar.leah.rest/", allow_redirects=False) as response:
             if response.status != 302:
                 return await ctx.error("API error? oscar sleeping...")
             media_url = response.headers["Location"]
