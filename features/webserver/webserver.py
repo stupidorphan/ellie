@@ -148,6 +148,47 @@ class Webserver(Cog):
             }
         )
 
+    @route("/banners/{user_id}")
+    async def banners(self: "Webserver", request: Request) -> Response:
+        """
+        Selects banners from the database for /history endpoint.
+        """
+
+        try:
+            user_id = int(request.match_info["user_id"])
+        except ValueError:
+            return json_response({"error": "Invalid user ID."}, status=400)
+
+        user = self.bot.get_user(user_id)
+        banners: List[Dict[str, str | datetime]] = await self.bot.db.fetch(
+            """
+            SELECT banner, updated_at
+            FROM metrics.banners
+            WHERE user_id = $1
+            ORDER BY updated_at DESC
+            """,
+            user_id,
+        )
+
+        return json_response(
+            {
+                "user": {
+                    "id": user_id,
+                    "name": user.name,
+                    "banner": user.banner.url if user and user.banner else None,
+                }
+                if user
+                else None,
+                "banners": [
+                    {
+                        "banner": banner["banner"],
+                        "updated_at": banner["updated_at"].timestamp(),
+                    }
+                    for banner in banners
+                ],
+            }
+        )
+
     @route("/commands")
     async def commands(self: "Webserver", request: Request) -> Response:
         """Returns information about all registered commands."""
