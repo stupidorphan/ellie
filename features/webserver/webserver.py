@@ -121,7 +121,7 @@ class Webserver(Cog):
         user = self.bot.get_user(user_id)
         avatars: List[Dict[str, str | datetime]] = await self.bot.db.fetch(
             """
-            SELECT asset, updated_at
+            SELECT avatar, updated_at
             FROM metrics.avatars
             WHERE user_id = $1
             ORDER BY updated_at DESC
@@ -140,7 +140,7 @@ class Webserver(Cog):
                 else None,
                 "avatars": [
                     {
-                        "asset": avatar["asset"],
+                        "avatar": avatar["avatar"],
                         "updated_at": avatar["updated_at"].timestamp(),
                     }
                     for avatar in avatars
