@@ -352,6 +352,13 @@ CREATE TABLE IF NOT EXISTS metrics.avatars (
     PRIMARY KEY (user_id, avatar)
 );
 
+CREATE TABLE IF NOT EXISTS metrics.banners (
+    user_id BIGINT NOT NULL,
+    banner TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, banner)
+);
+
 --- GitHub
 CREATE TABLE IF NOT EXISTS github_watches (
     guild_id BIGINT,
