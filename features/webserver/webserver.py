@@ -8,6 +8,7 @@ from aiohttp.web import (Application, BaseRequest, Request, Response,
 from aiohttp.web import _run_app as web
 from aiohttp.web import json_response
 from discord.ext.commands import Cog
+import discord
 from aiohttp.web import middleware
 
 import config
@@ -159,7 +160,10 @@ class Webserver(Cog):
         except ValueError:
             return json_response({"error": "Invalid user ID."}, status=400)
 
-        user = self.bot.get_user(user_id)
+        try:
+            user = await self.bot.fetch_user(user_id)
+        except (discord.NotFound, discord.HTTPException):
+            user = None
         banners: List[Dict[str, str | datetime]] = await self.bot.db.fetch(
             """
             SELECT banner, updated_at
