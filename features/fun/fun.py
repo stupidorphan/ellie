@@ -1,7 +1,6 @@
 from asyncio import sleep
 from random import choice, randint
 from typing import Literal
-import aiohttp
 import config
 import io
 import discord
@@ -21,6 +20,46 @@ from discord import app_commands
 from discord.ext.commands import hybrid_command
 
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "assets")
+
+_SHIP_FONT_CANDIDATES = (
+    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+)
+
+
+def _load_ship_font(size: int) -> ImageFont.ImageFont:
+    for path in _SHIP_FONT_CANDIDATES:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def _ship_color(percentage: int) -> tuple[int, int, int]:
+    t = percentage / 100
+    base = (0x5A, 0x5A, 0x60)
+    peak = (0xFF, 0x4D, 0xA6)
+    return tuple(int(base[i] + (peak[i] - base[i]) * t) for i in range(3))
+
+
+def _circular_avatar(data: bytes, size: int, ring_color: tuple[int, int, int]) -> Image.Image:
+    ring_width = 4
+    canvas_size = size + ring_width * 2
+    canvas = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(canvas)
+    draw.ellipse((0, 0, canvas_size - 1, canvas_size - 1), fill=ring_color + (255,))
+
+    with Image.open(io.BytesIO(data)) as raw:
+        avatar = raw.convert("RGBA").resize((size, size), Image.LANCZOS)
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, size - 1, size - 1), fill=255)
+    canvas.paste(avatar, (ring_width, ring_width), mask)
+    return canvas
+
 
 class Fun(Cog):
     """Cog for Fun commands."""
@@ -478,88 +517,75 @@ class Fun(Cog):
             return await ctx.error("You can't ship someone with themselves!")
 
         compatibility = ((member1.id + member2.id) % 100) + 1
-        
+
         embed = Embed(
             title="💕 Love Calculator 💕",
             description=f"**{member1.name}** x **{member2.name}**\n**{compatibility}%**",
-            color=Color.pink()
+            color=Color.pink(),
         )
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(str(member1.display_avatar.url)) as resp:
-                avatar1_data = await resp.read()
-            async with session.get(str(member2.display_avatar.url)) as resp:
-                avatar2_data = await resp.read()
+        async with self.bot.session.get(str(member1.display_avatar.url)) as resp:
+            avatar1_data = await resp.read()
+        async with self.bot.session.get(str(member2.display_avatar.url)) as resp:
+            avatar2_data = await resp.read()
 
-        def create_circular_mask(size):
-            mask = Image.new('L', size, 0)
-            draw = ImageDraw.Draw(mask)
-            draw.ellipse((0, 0) + size, fill=255)
-            return mask
+        W, H = 600, 280
+        AV = 160
+        BAR_W, BAR_H = 480, 28
+        BAR_X = (W - BAR_W) // 2
+        BAR_Y = 220
+        BAR_R = BAR_H // 2
+
+        ring = _ship_color(compatibility)
+
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(canvas)
+        draw.rounded_rectangle((0, 0, W - 1, H - 1), radius=24, fill=(0x2B, 0x2D, 0x31, 255))
+
+        av1 = _circular_avatar(avatar1_data, AV, ring)
+        av2 = _circular_avatar(avatar2_data, AV, ring)
+        av_y = 30
+        canvas.paste(av1, (40, av_y), av1)
+        canvas.paste(av2, (W - av1.width - 40, av_y), av2)
 
         heart_path = os.path.join(ASSETS_DIR, "heart.png")
-        with Image.open(io.BytesIO(avatar1_data)) as avatar1_img, \
-             Image.open(io.BytesIO(avatar2_data)) as avatar2_img, \
-             Image.open(heart_path) as heart_img:
-            
-            size = (128, 128)
-            avatar1_img = avatar1_img.convert('RGBA').resize(size)
-            avatar2_img = avatar2_img.convert('RGBA').resize(size)
-            
-            mask = create_circular_mask(size)
-            avatar1_circle = Image.new('RGBA', size, (0, 0, 0, 0))
-            avatar2_circle = Image.new('RGBA', size, (0, 0, 0, 0))
-            avatar1_circle.paste(avatar1_img, (0, 0), mask)
-            avatar2_circle.paste(avatar2_img, (0, 0), mask)
-            
-            base = Image.new('RGBA', (350, 170), (0, 0, 0, 0))
-            
-            avatar1_pos = (30, 0)
-            avatar2_pos = (192, 0)
-            
-            bar_width = 200
-            bar_height = 16
-            bar_pos = (75, 140)
-            
-            draw = ImageDraw.Draw(base)
-            draw.rectangle(
-                (bar_pos[0], bar_pos[1], bar_pos[0] + bar_width, bar_pos[1] + bar_height),
-                fill=(100, 100, 100, 255),
-                outline=(255, 255, 255, 255),
-                width=1
+        with Image.open(heart_path) as heart_raw:
+            heart = heart_raw.convert("RGBA").resize((90, 90), Image.LANCZOS)
+        canvas.paste(
+            heart,
+            ((W - heart.width) // 2, av_y + (av1.height - heart.height) // 2),
+            heart,
+        )
+
+        draw.rounded_rectangle(
+            (BAR_X, BAR_Y, BAR_X + BAR_W, BAR_Y + BAR_H),
+            radius=BAR_R,
+            fill=(0x3C, 0x3E, 0x42, 255),
+        )
+        filled_w = int(BAR_W * (compatibility / 100))
+        if filled_w >= BAR_R * 2:
+            draw.rounded_rectangle(
+                (BAR_X, BAR_Y, BAR_X + filled_w, BAR_Y + BAR_H),
+                radius=BAR_R,
+                fill=ring + (255,),
             )
-            
-            filled_width = int(bar_width * (compatibility / 100))
-            draw.rectangle(
-                (bar_pos[0], bar_pos[1], bar_pos[0] + filled_width, bar_pos[1] + bar_height),
-                fill=(255, 192, 203, 255)
+        elif filled_w > 0:
+            draw.ellipse(
+                (BAR_X, BAR_Y, BAR_X + BAR_H, BAR_Y + BAR_H),
+                fill=ring + (255,),
             )
-            
-            try:
-                font = ImageFont.truetype("assets/font.ttf", 20)
-            except:
-                font = ImageFont.load_default()
-                
-            text = f"{compatibility}%"
-            text_bbox = draw.textbbox((0, 0), text, font=font)
-            text_width = text_bbox[2] - text_bbox[0]
-            text_x = bar_pos[0] + (bar_width - text_width) // 2
-            text_y = bar_pos[1] + (bar_height - text_bbox[3]) // 2
-            draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255, 255))
-            
-            base.paste(avatar1_circle, avatar1_pos)
-            base.paste(avatar2_circle, avatar2_pos)
-            
-            heart_size = (48, 48)
-            heart_img = heart_img.resize(heart_size)
-            heart_pos = (bar_pos[0] + (bar_width // 2) - (heart_size[0] // 2), 
-                        bar_pos[1] - (heart_size[1] // 2))
-            base.paste(heart_img, heart_pos, heart_img)
-            
-            buffer = io.BytesIO()
-            base.save(buffer, 'PNG')
-            buffer.seek(0)
-            
-            file = File(buffer, 'ship.png')
-            embed.set_image(url="attachment://ship.png")
-            await ctx.send(embed=embed, file=file)
+
+        font = _load_ship_font(22)
+        text = f"{compatibility}%"
+        tx0, ty0, tx1, ty1 = draw.textbbox((0, 0), text, font=font)
+        text_x = BAR_X + (BAR_W - (tx1 - tx0)) // 2 - tx0
+        text_y = BAR_Y + (BAR_H - (ty1 - ty0)) // 2 - ty0
+        draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255, 255))
+
+        buffer = io.BytesIO()
+        canvas.save(buffer, "PNG", optimize=True)
+        buffer.seek(0)
+
+        file = File(buffer, "ship.png")
+        embed.set_image(url="attachment://ship.png")
+        await ctx.send(embed=embed, file=file)
