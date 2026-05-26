@@ -296,16 +296,16 @@ class VoiceMaster(Cog):
         embed.add_field(
             name="**Button Usage**",
             value=(
-                f"{config.Emoji.Interface.lock} — [`Lock`](https://ellie.nerv.run) the voice channel\n"
-                f"{config.Emoji.Interface.unlock} — [`Unlock`](https://ellie.nerv.run) the voice channel\n"
-                f"{config.Emoji.Interface.ghost} — [`Ghost`](https://ellie.nerv.run) the voice channel\n"
-                f"{config.Emoji.Interface.reveal} — [`Reveal`](https://ellie.nerv.run) the voice channel\n"
-                f"{config.Emoji.Interface.claim} — [`Claim`](https://ellie.nerv.run) the voice channel\n"
-                f"{config.Emoji.Interface.disconnect} — [`Disconnect`](https://ellie.nerv.run) a member\n"
-                f"{config.Emoji.Interface.activity} — [`Start`](https://ellie.nerv.run) a new voice channel activity\n"
-                f"{config.Emoji.Interface.information} — [`View`](https://ellie.nerv.run) channel information\n"
-                f"{config.Emoji.Interface.increase} — [`Increase`](https://ellie.nerv.run) the user limit\n"
-                f"{config.Emoji.Interface.decrease} — [`Decrease`](https://ellie.nerv.run) the user limit\n"
+                f"{config.Emoji.Interface.lock} — [`Lock`](https://ellie.firefly.rest) the voice channel\n"
+                f"{config.Emoji.Interface.unlock} — [`Unlock`](https://ellie.firefly.rest) the voice channel\n"
+                f"{config.Emoji.Interface.ghost} — [`Ghost`](https://ellie.firefly.rest) the voice channel\n"
+                f"{config.Emoji.Interface.reveal} — [`Reveal`](https://ellie.firefly.rest) the voice channel\n"
+                f"{config.Emoji.Interface.claim} — [`Claim`](https://ellie.firefly.rest) the voice channel\n"
+                f"{config.Emoji.Interface.disconnect} — [`Disconnect`](https://ellie.firefly.rest) a member\n"
+                f"{config.Emoji.Interface.activity} — [`Start`](https://ellie.firefly.rest) a new voice channel activity\n"
+                f"{config.Emoji.Interface.information} — [`View`](https://ellie.firefly.rest) channel information\n"
+                f"{config.Emoji.Interface.increase} — [`Increase`](https://ellie.firefly.rest) the user limit\n"
+                f"{config.Emoji.Interface.decrease} — [`Decrease`](https://ellie.firefly.rest) the user limit\n"
             ),
         )
 
