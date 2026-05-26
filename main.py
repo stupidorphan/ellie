@@ -1,7 +1,8 @@
 from discord.ext.commands import CommandError
 
-from tools.managers.context import Context
 from tools.ellie import ellie
+from tools.managers import command_gates
+from tools.managers.context import Context
 
 bot = ellie()
 
@@ -24,62 +25,31 @@ async def blacklisted(ctx: Context) -> bool:
 @bot.check
 async def disabled_check(ctx: Context) -> bool:
     """Checks if the command is disabled in the channel"""
-    if not ctx.author.guild_permissions.administrator:
-        if parent := ctx.command.parent:
-            if await ctx.bot.db.fetchrow(
-                "SELECT * FROM commands.ignored WHERE guild_id = $1 AND target_id = ANY($2::BIGINT[])",
-                ctx.guild.id,
-                [
-                    ctx.author.id,
-                    ctx.channel.id,
-                ],
-            ):
-                return False
-            if await ctx.bot.db.fetchrow(
-                "SELECT * FROM commands.disabled WHERE guild_id = $1 AND channel_id = $2 AND command = $3",
-                ctx.guild.id,
-                ctx.channel.id,
-                parent.qualified_name,
-            ):
-                raise CommandError(
-                    f"Command `{ctx.command.qualified_name}` is disabled in {ctx.channel.mention}"
-                )
-            if await ctx.bot.db.fetchrow(
-                "SELECT * FROM commands.restricted WHERE guild_id = $1 AND command = $2 AND NOT role_id = ANY($3::BIGINT[])",
-                ctx.guild.id,
-                parent.qualified_name,
-                [role.id for role in ctx.author.roles],
-            ):
-                raise CommandError(
-                    f"You don't have a **permitted role** to use `{parent.qualified_name}`"
-                )
+    if ctx.author.guild_permissions.administrator:
+        return True
 
-        if await ctx.bot.db.fetchrow(
-            "SELECT * FROM commands.ignored WHERE guild_id = $1 AND target_id = ANY($2::BIGINT[])",
-            ctx.guild.id,
-            [
-                ctx.author.id,
-                ctx.channel.id,
-            ],
-        ):
-            return False
-        if await ctx.bot.db.fetchrow(
-            "SELECT * FROM commands.disabled WHERE guild_id = $1 AND channel_id = $2 AND command = $3",
-            ctx.guild.id,
-            ctx.channel.id,
-            ctx.command.qualified_name,
-        ):
+    ignored = await command_gates.ignored_targets(ctx.bot, ctx.guild.id)
+    if ctx.author.id in ignored or ctx.channel.id in ignored:
+        return False
+
+    disabled = await command_gates.disabled_commands(
+        ctx.bot, ctx.guild.id, ctx.channel.id
+    )
+    restricted = await command_gates.restricted_commands(ctx.bot, ctx.guild.id)
+    user_role_ids = {role.id for role in ctx.author.roles}
+
+    parent = ctx.command.parent
+    targets = [name for name in (parent and parent.qualified_name, ctx.command.qualified_name) if name]
+
+    for name in targets:
+        if name in disabled:
             raise CommandError(
                 f"Command `{ctx.command.qualified_name}` is disabled in {ctx.channel.mention}"
             )
-        if await ctx.bot.db.fetchrow(
-            "SELECT * FROM commands.restricted WHERE guild_id = $1 AND command = $2 AND NOT role_id = ANY($3::BIGINT[])",
-            ctx.guild.id,
-            ctx.command.qualified_name,
-            [role.id for role in ctx.author.roles],
-        ):
+        allowed_roles = restricted.get(name)
+        if allowed_roles is not None and not (allowed_roles & user_role_ids):
             raise CommandError(
-                f"You don't have a **permitted role** to use `{ctx.command.qualified_name}`"
+                f"You don't have a **permitted role** to use `{name}`"
             )
 
     return True

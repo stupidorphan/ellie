@@ -21,6 +21,7 @@ from tools.converters.basic import (Command, Emoji, EmojiFinder, ImageFinder,
 from tools.converters.color import Color
 from tools.converters.embed import EmbedScript, EmbedScriptValidator
 from tools.converters.role import Role
+from tools.managers import command_gates
 from tools.managers.cog import Cog
 from tools.managers.context import Context
 from tools.managers.converter import Sound
@@ -1976,6 +1977,7 @@ class Servers(Cog):
                     f"Command `{command.qualified_name}` is already enabled in {channel.mention}"
                 )
 
+        await command_gates.invalidate(ctx.guild.id)
         await ctx.approve(
             f"Command `{command.qualified_name}` has been enabled in "
             + (
@@ -2041,6 +2043,7 @@ class Servers(Cog):
                 f"Command `{command.qualified_name}` is already disabled in every channel"
             )
 
+        await command_gates.invalidate(ctx.guild.id)
         await ctx.approve(
             f"Command `{command.qualified_name}` has been disabled in "
             + (
@@ -2110,10 +2113,12 @@ class Servers(Cog):
                 role.id,
                 command.qualified_name,
             )
+            await command_gates.invalidate(ctx.guild.id)
             return await ctx.approve(
                 f"Removed restriction for {role.mention} on `{command.qualified_name}`"
             )
 
+        await command_gates.invalidate(ctx.guild.id)
         await ctx.approve(
             f"Allowing users with {role.mention} to use `{command.qualified_name}`"
         )
