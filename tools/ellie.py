@@ -185,6 +185,11 @@ class ellie(AutoShardedBot):
         # Add this line to set mobile status
         self.http.user_agent = 'Discord iOS'
 
+        try:
+            await self.tree.sync()
+        except Exception as exception:
+            log.exception("Failed to sync slash command tree: %s", exception)
+
     @property
     def members(self):
         return list(self.get_all_members())
