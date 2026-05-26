@@ -82,64 +82,34 @@ async def reskin_webhook(self, webhook_id: int):
         return webhook
 
 
+async def _process_embed(self, embed: Embed, files: list) -> None:
+    if not embed.color:
+        embed.color = config.Color.neutral
+    if embed.title:
+        embed.title = shorten(embed.title, 256)
+    if embed.description:
+        embed.description = shorten(embed.description, 4096)
+    for attachment in getattr(embed, "_attachments", None) or ():
+        if isinstance(attachment, File):
+            files.append(File(copy(attachment.fp), filename=attachment.filename))
+        elif isinstance(attachment, tuple):
+            response = await self._state._get_client().session.get(attachment[0])
+            if response.status == 200:
+                files.append(
+                    File(BytesIO(await response.read()), filename=attachment[1])
+                )
+
+
 async def send(self, *args, **kwargs):
     kwargs["files"] = kwargs.get("files") or []
     if file := kwargs.pop("file", None):
         kwargs["files"].append(file)
 
     if embed := kwargs.get("embed"):
-        if not embed.color:
-            embed.color = config.Color.neutral
-        if embed.title:
-            embed.title = shorten(embed.title, 256)
-        if embed.description:
-            embed.description = shorten(embed.description, 4096)
-        if hasattr(embed, "_attachments") and embed._attachments:
-            for attachment in embed._attachments:
-                if isinstance(attachment, File):
-                    kwargs["files"].append(
-                        File(copy(attachment.fp), filename=attachment.filename)
-                    )
-                elif isinstance(attachment, tuple):
-                    response = await self._state._get_client().session.get(
-                        attachment[0]
-                    )
-                    if response.status == 200:
-                        kwargs["files"].append(
-                            File(
-                                BytesIO(await response.read()),
-                                filename=attachment[1],
-                            )
-                        )
-
+        await _process_embed(self, embed, kwargs["files"])
     elif embeds := kwargs.get("embeds"):
         for embed in embeds:
-            if not embed.color:
-                embed.color = config.Color.neutral
-            if embed.title:
-                embed.title = shorten(embed.title, 256)
-            if embed.description:
-                embed.description = shorten(embed.description, 4096)
-            if hasattr(embed, "_attachments") and embed._attachments:
-                for attachment in embed._attachments:
-                    if isinstance(attachment, File):
-                        kwargs["files"].append(
-                            File(
-                                copy(attachment.fp),
-                                filename=attachment.filename,
-                            )
-                        )
-                    elif isinstance(attachment, tuple):
-                        response = await self._state._get_client().session.get(
-                            attachment[0]
-                        )
-                        if response.status == 200:
-                            kwargs["files"].append(
-                                File(
-                                    BytesIO(await response.read()),
-                                    filename=attachment[1],
-                                )
-                            )
+            await _process_embed(self, embed, kwargs["files"])
 
     if content := (args[0] if args else kwargs.get("content")):
         content = str(content)
