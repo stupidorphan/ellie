@@ -1,6 +1,8 @@
 from discord import Color as DiscordColor
 from discord.ext.commands import CommandError, Context, Converter
 
+import config
+
 colors = {
     "aliceblue": "#f0f8ff",
     "antiquewhite": "#faebd7",
@@ -156,7 +158,7 @@ def get_color(value: str):
     if value.lower() in {"random", "rand", "r"}:
         return DiscordColor.random()
     if value.lower() in {"invisible", "invis"}:
-        return DiscordColor.from_str("#2B2D31")
+        return DiscordColor(config.Color.neutral)
     if value.lower() in {"blurple", "blurp"}:
         return DiscordColor.blurple()
     if value.lower() in {"black", "negro"}:
@@ -189,7 +191,7 @@ class Color(Converter):
         if argument.lower() in {"random", "rand", "r"}:
             return DiscordColor.random()
         if argument.lower() in {"invisible", "invis"}:
-            return DiscordColor.from_str("#2B2D31")
+            return DiscordColor(config.Color.neutral)
 
         if color := get_color(argument):
             return color
