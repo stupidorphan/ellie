@@ -1180,21 +1180,22 @@ class Miscellaneous(Cog):
     @app_commands.command(name="oscar", description="Fetch a random Oscar photo")
     async def oscar_slash(self, interaction: Interaction):
         """Fetch a random Oscar photo."""
+        await interaction.response.defer()
         async with self.bot.session.get("https://oscar.leah.rocks/pibble/", allow_redirects=False) as response:
             if response.status != 302:
-                return await interaction.response.send_message("Failed to fetch Oscar photo.", ephemeral=True)
+                return await interaction.followup.send("Failed to fetch Oscar photo.", ephemeral=True)
             media_url = response.headers["Location"]
 
         embed = Embed()
         embed.set_author(
-            name=f"{interaction.user.display_name} [{interaction.user.name}]", 
+            name=f"{interaction.user.display_name} [{interaction.user.name}]",
             icon_url=interaction.user.display_avatar.url
         )
         embed.set_image(url=media_url)
         embed.add_field(name="oscar", value=media_url)
         embed.set_footer(text=f"{interaction.created_at.strftime('%Y-%m-%d %H:%M:%S')} | Oscar")
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
     @command(name="pibble", aliases=["gmail"])
     async def pibble_prefix(self: "Miscellaneous", ctx: Context):
@@ -1215,21 +1216,22 @@ class Miscellaneous(Cog):
     @app_commands.command(name="pibble", description="Fetch a random Pibble photo")
     async def pibble_slash(self, interaction: Interaction):
         """Fetch a random Pibble photo."""
+        await interaction.response.defer()
         async with self.bot.session.get("https://files.nerv.run/pibble/") as response:
             if response.status != 200:
-                return await interaction.response.send_message("Failed to fetch Pibble photo.", ephemeral=True)
+                return await interaction.followup.send("Failed to fetch Pibble photo.", ephemeral=True)
             media_url = await response.text()
 
         embed = Embed()
         embed.set_author(
-            name=f"{interaction.user.display_name} [{interaction.user.name}]", 
+            name=f"{interaction.user.display_name} [{interaction.user.name}]",
             icon_url=interaction.user.display_avatar.url
         )
         embed.set_image(url=media_url)
         embed.add_field(name="pibble", value=media_url)
         embed.set_footer(text=f"{interaction.created_at.strftime('%Y-%m-%d %H:%M:%S')} | Oscar")
 
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
     @command(
         name="download",

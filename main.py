@@ -1,3 +1,5 @@
+from contextlib import suppress
+
 from discord.ext.commands import CommandError
 
 from tools.ellie import ellie
@@ -5,6 +7,14 @@ from tools.managers import command_gates
 from tools.managers.context import Context
 
 bot = ellie()
+
+
+@bot.before_invoke
+async def defer_slash(ctx: Context) -> None:
+    """Defer slash invocations so command bodies aren't bound by the 3-second response window."""
+    if ctx.interaction is not None and not ctx.interaction.response.is_done():
+        with suppress(Exception):
+            await ctx.interaction.response.defer()
 
 
 @bot.check
